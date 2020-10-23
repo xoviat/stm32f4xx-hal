@@ -93,6 +93,7 @@ pub mod crc32;
     feature = "device-selected",
     not(any(feature = "stm32f411", feature = "stm32f412", feature = "stm32f401",))
 ))]
+pub mod can;
 pub mod dac;
 #[cfg(feature = "device-selected")]
 pub mod delay;
