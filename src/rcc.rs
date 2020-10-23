@@ -1,5 +1,5 @@
 use crate::stm32::rcc::cfgr::{HPRE_A, SW_A};
-use crate::stm32::RCC;
+use crate::stm32::{rcc,RCC};
 
 use crate::time::Hertz;
 
@@ -12,6 +12,7 @@ pub trait RccExt {
 impl RccExt for RCC {
     fn constrain(self) -> Rcc {
         Rcc {
+            apb1: APB1 { _0: () },
             cfgr: CFGR {
                 hse: None,
                 hclk: None,
@@ -26,6 +27,8 @@ impl RccExt for RCC {
 
 /// Constrained RCC peripheral
 pub struct Rcc {
+    /// Advanced Peripheral Bus 1 (APB1) registers
+    pub apb1: APB1,
     pub cfgr: CFGR,
 }
 
@@ -116,6 +119,23 @@ pub const PCLK2_MAX: u32 = SYSCLK_MAX / 2;
 
 /// Maximum APB1 peripheral clock frequency
 pub const PCLK1_MAX: u32 = PCLK2_MAX / 2;
+
+/// Advanced Peripheral Bus 1 (APB1) registers
+pub struct APB1 {
+    _0: (),
+}
+
+impl APB1 {
+    pub(crate) fn enr(&mut self) -> &rcc::APB1ENR {
+        // NOTE(unsafe) this proxy grants exclusive access to this register
+        unsafe { &(*RCC::ptr()).apb1enr }
+    }
+
+    pub(crate) fn rstr(&mut self) -> &rcc::APB1RSTR {
+        // NOTE(unsafe) this proxy grants exclusive access to this register
+        unsafe { &(*RCC::ptr()).apb1rstr }
+    }
+}
 
 pub struct CFGR {
     hse: Option<u32>,
