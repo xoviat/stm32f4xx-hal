@@ -71,11 +71,11 @@ impl Rtc {
 
     /// Sets calendar clock to 24 hr format
     pub fn set_24h_fmt(&mut self) {
-        self.regs.cr.modify(|_, w| w.fmt().set_bit());
+        self.modify(|regs| regs.cr.modify(|_, w| w.fmt().set_bit()));
     }
     /// Sets calendar clock to 12 hr format
     pub fn set_12h_fmt(&mut self) {
-        self.regs.cr.modify(|_, w| w.fmt().clear_bit());
+        self.modify(|regs| regs.cr.modify(|_, w| w.fmt().clear_bit()));
     }
 
     /// Reads current hour format selection
@@ -112,6 +112,7 @@ impl Rtc {
 }
 
 impl Rtcc for Rtc {
+    // ** Assumes 1970-01-01 00:00:00 Epoch **
     type Error = Error;
 
     /// set time using NaiveTime (ISO 8601 time without timezone)
@@ -121,14 +122,16 @@ impl Rtcc for Rtc {
         let (ht, hu) = bcd2_encode(time.hour())?;
         let (mnt, mnu) = bcd2_encode(time.minute())?;
         let (st, su) = bcd2_encode(time.second())?;
-        self.regs.tr.write(|w| unsafe {
-            w.ht().bits(ht);
-            w.hu().bits(hu);
-            w.mnt().bits(mnt);
-            w.mnu().bits(mnu);
-            w.st().bits(st);
-            w.su().bits(su);
-            w.pm().clear_bit()
+        self.modify(|regs| {
+            regs.tr.write(|w| unsafe {
+                w.ht().bits(ht);
+                w.hu().bits(hu);
+                w.mnt().bits(mnt);
+                w.mnu().bits(mnu);
+                w.st().bits(st);
+                w.su().bits(su);
+                w.pm().clear_bit()
+            })
         });
 
         Ok(())
@@ -167,9 +170,10 @@ impl Rtcc for Rtc {
             Hours::AM(_h) | Hours::PM(_h) => self.set_12h_fmt(),
         }
 
-        self.regs
-            .tr
-            .modify(|_, w| unsafe { w.ht().bits(ht).hu().bits(hu) });
+        self.modify(|regs| {
+            regs.tr
+                .modify(|_, w| unsafe { w.ht().bits(ht).hu().bits(hu) })
+        });
 
         Ok(())
     }
@@ -213,7 +217,7 @@ impl Rtcc for Rtc {
         if (year < 1970) || (year > 2038) {
             return Err(Error::InvalidInputData);
         }
-        let (yt, yu) = bcd2_encode(year as u32)?;
+        let (yt, yu) = bcd2_encode(year as u32 - 1970)?;
         self.modify(|regs| {
             regs.dr
                 .modify(|_, w| unsafe { w.yt().bits(yt).yu().bits(yu) })
@@ -233,13 +237,15 @@ impl Rtcc for Rtc {
         let (mt, mu) = bcd2_encode(date.month())?;
         let (dt, du) = bcd2_encode(date.day())?;
 
-        self.regs.dr.write(|w| unsafe {
-            w.dt().bits(dt);
-            w.du().bits(du);
-            w.mt().bit(mt > 0);
-            w.mu().bits(mu);
-            w.yt().bits(yt);
-            w.yu().bits(yu)
+        self.modify(|regs| {
+            regs.dr.write(|w| unsafe {
+                w.dt().bits(dt);
+                w.du().bits(du);
+                w.mt().bit(mt > 0);
+                w.mu().bits(mu);
+                w.yt().bits(yt);
+                w.yu().bits(yu)
+            })
         });
 
         Ok(())
@@ -340,14 +346,14 @@ impl Rtcc for Rtc {
 
     fn get_year(&mut self) -> Result<u16, Self::Error> {
         let dr = self.regs.dr.read();
-        let year = bcd2_decode(dr.yt().bits(), dr.yu().bits());
+        let year = bcd2_decode(dr.yt().bits(), dr.yu().bits()) + 1970; // 1970-01-01 is the epoch begin.
         Ok(year as u16)
     }
 
     fn get_date(&mut self) -> Result<NaiveDate, Self::Error> {
         let day = self.get_day().unwrap();
         let month = self.get_month().unwrap();
-        let year = self.get_year().unwrap() + 1970; // 1970-01-01 is epoch begin.
+        let year = self.get_year().unwrap();
 
         Ok(NaiveDate::from_ymd(year.into(), month.into(), day.into()))
     }
@@ -357,7 +363,7 @@ impl Rtcc for Rtc {
 
         let day = self.get_day().unwrap();
         let month = self.get_month().unwrap();
-        let year = self.get_year().unwrap() + 1970; // 1970-01-01 is epoch begin.
+        let year = self.get_year().unwrap();
 
         let seconds = self.get_seconds().unwrap();
         let minutes = self.get_minutes().unwrap();
