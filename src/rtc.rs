@@ -58,7 +58,7 @@ impl Rtc {
 
         result.modify(|regs| {
             // Set 24 Hour
-            regs.cr.modify(|_, w| w.fmt().set_bit());
+            regs.cr.modify(|_, w| w.fmt().clear_bit());
             // Set prescalers
             regs.prer.modify(|_, w| unsafe {
                 w.prediv_s().bits(prediv_s);
@@ -71,16 +71,16 @@ impl Rtc {
 
     /// Sets calendar clock to 24 hr format
     pub fn set_24h_fmt(&mut self) {
-        self.regs.cr.modify(|_, w| w.fmt().set_bit());
+        self.regs.cr.modify(|_, w| w.fmt().clear_bit());
     }
     /// Sets calendar clock to 12 hr format
     pub fn set_12h_fmt(&mut self) {
-        self.regs.cr.modify(|_, w| w.fmt().clear_bit());
+        self.regs.cr.modify(|_, w| w.fmt().set_bit());
     }
 
     /// Reads current hour format selection
     pub fn is_24h_fmt(&self) -> bool {
-        self.regs.cr.read().fmt().bit()
+        !self.regs.cr.read().fmt().bit()
     }
 
     /// As described in Section 27.3.7 in RM0316,
@@ -360,14 +360,15 @@ impl Rtcc for Rtc {
 
     fn get_datetime(&mut self) -> Result<NaiveDateTime, Self::Error> {
         self.set_24h_fmt();
+        // If the time register is read, the upper bits are frozen until the date is read.
+        // Thus, read the time first, then the date.
+        let seconds = self.get_seconds().unwrap();
+        let minutes = self.get_minutes().unwrap();
+        let hours = hours_to_u8(self.get_hours()?)?;
 
         let day = self.get_day().unwrap();
         let month = self.get_month().unwrap();
         let year = self.get_year().unwrap();
-
-        let seconds = self.get_seconds().unwrap();
-        let minutes = self.get_minutes().unwrap();
-        let hours = hours_to_u8(self.get_hours()?)?;
 
         Ok(
             NaiveDate::from_ymd(year.into(), month.into(), day.into()).and_hms(
