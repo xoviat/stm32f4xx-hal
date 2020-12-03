@@ -33,7 +33,7 @@ pub use embedded_types::can::{
 // currently only used in the Tx logic to wait for completion
 // that would normally lock up if the bus wasn't connected for example
 // 10 us at 16 MHz
-pub const MAX_BLOCK_TICKS: u32 = 16 * 10;
+pub const MAX_BLOCK_TICKS: u32 = 512 * 10;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CanError {
@@ -1122,6 +1122,6 @@ impl<TX, RX> Can<$CANX, (TX, RX)> {
 }
 
 hal! {
-    CAN1: (can1, can1en, can1rst, true),
+    CAN1: (can1, can1en, can1rst, false),
     CAN2: (can2, can2en, can2rst, false),
 }
