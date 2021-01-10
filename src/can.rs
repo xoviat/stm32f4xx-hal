@@ -39,13 +39,11 @@ pub trait Pins: sealed::Sealed {
 impl sealed::Sealed for (PB9<Alternate<PushPull>>, PB8<Input<Floating>>) {}
 impl Pins for (PB9<Alternate<PushPull>>, PB8<Input<Floating>>) {
     type Instance = CAN1;
-
 }
 
 impl sealed::Sealed for (PB13<Alternate<PushPull>>, PB12<Input<Floating>>) {}
 impl Pins for (PB13<Alternate<PushPull>>, PB12<Input<Floating>>) {
     type Instance = CAN2;
-
 }
 
 /// Interface to the CAN peripheral.
@@ -54,14 +52,14 @@ pub struct Can<Instance> {
 }
 
 impl<Instance> Can<Instance>
+where
+    Instance: crate::rcc::Enable<Bus = APB1>,
 {
     /// Creates a CAN interaface.
     pub fn new(can: Instance, apb: &mut APB1) -> Can<Instance> {
-        apb.enr().modify(|_, w| w.can1en().set_bit());
+        Instance::enable(apb);
         Can { _peripheral: can }
     }
-
-   
 }
 
 unsafe impl bxcan::Instance for Can<CAN1> {

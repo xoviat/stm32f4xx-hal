@@ -1,5 +1,5 @@
 use crate::stm32::rcc::cfgr::{HPRE_A, SW_A};
-use crate::stm32::{rcc,RCC};
+use crate::stm32::{rcc, RCC};
 
 use crate::time::Hertz;
 
@@ -124,6 +124,14 @@ pub const PCLK2_MAX: u32 = SYSCLK_MAX / 2;
 pub const PCLK1_MAX: u32 = PCLK2_MAX / 2;
 
 /// Advanced Peripheral Bus 1 (APB1) registers
+///
+/// Aquired through the `Rcc` registers:
+///
+/// ```rust
+/// let dp = pac::Peripherals::take().unwrap();
+/// let mut rcc = dp.RCC.constrain();
+/// function_that_uses_apb1(&mut rcc.apb1)
+/// ```
 pub struct APB1 {
     _0: (),
 }
@@ -137,6 +145,13 @@ impl APB1 {
     pub(crate) fn rstr(&mut self) -> &rcc::APB1RSTR {
         // NOTE(unsafe) this proxy grants exclusive access to this register
         unsafe { &(*RCC::ptr()).apb1rstr }
+    }
+}
+
+impl APB1 {
+    /// Set power interface clock (PWREN) bit in RCC_APB1ENR
+    pub fn set_pwren(&mut self) {
+        self.enr().modify(|_r, w| w.pwren().set_bit())
     }
 }
 
@@ -320,6 +335,8 @@ impl CFGR {
         }
     }
 
+    /// Initialises the hardware according to CFGR state returning a Clocks instance.
+    /// Panics if overclocking is attempted.
     pub fn freeze(self) -> Clocks {
         let rcc = unsafe { &*RCC::ptr() };
 
@@ -516,4 +533,57 @@ impl Clocks {
             .map(|freq| (48_000_000 - freq.0 as i32).abs() <= 120_000)
             .unwrap_or(false)
     }
+}
+
+pub(crate) mod sealed {
+    /// Bus associated to peripheral
+    pub trait RccBus {
+        /// Bus type;
+        type Bus;
+    }
+}
+use sealed::RccBus;
+
+/// Enable/disable peripheral
+pub trait Enable: RccBus {
+    fn enable(apb: &mut Self::Bus);
+    fn disable(apb: &mut Self::Bus);
+}
+
+/// Reset peripheral
+pub trait Reset: RccBus {
+    fn reset(apb: &mut Self::Bus);
+}
+
+macro_rules! bus {
+    ($($PER:ident => ($apbX:ty, $peren:ident, $perrst:ident),)+) => {
+        $(
+            impl RccBus for crate::pac::$PER {
+                type Bus = $apbX;
+            }
+            impl Enable for crate::pac::$PER {
+                #[inline(always)]
+                fn enable(apb: &mut Self::Bus) {
+                    apb.enr().modify(|_, w| w.$peren().set_bit());
+                }
+                #[inline(always)]
+                fn disable(apb: &mut Self::Bus) {
+                    apb.enr().modify(|_, w| w.$peren().clear_bit());
+                }
+            }
+            impl Reset for crate::pac::$PER {
+                #[inline(always)]
+                fn reset(apb: &mut Self::Bus) {
+                    apb.rstr().modify(|_, w| w.$perrst().set_bit());
+                    apb.rstr().modify(|_, w| w.$perrst().clear_bit());
+                }
+            }
+        )+
+    }
+}
+
+#[cfg(feature = "has-can")]
+bus! {
+    CAN1 => (APB1, can1en, can1rst),
+    CAN2 => (APB1, can2en, can2rst),
 }
