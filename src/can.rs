@@ -18,10 +18,9 @@
 //! | TX       | PB13  |
 //! | RX       | PB12  |
 
-use crate::gpio::gpiob::{PB12, PB13, PB5, PB6};
 use crate::gpio::{
-    gpioa::{PA11, PA12},
     gpiob::{PB8, PB9},
+    gpiob::{PB12, PB13},
     Alternate, Floating, Input, PushPull,
 };
 use crate::pac::CAN1;

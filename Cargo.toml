@@ -26,7 +26,8 @@ features = ["stm32f429", "rt", "usb_fs"]
 targets = ["thumbv7em-none-eabihf"]
 
 [dependencies]
-bxcan = "0.3.0"
+#bxcan = "0.3.0"
+bxcan = { git = "https://github.com/timokroeger/bxcan", branch = "embedded-can" }
 cortex-m = ">=0.5.8,<0.7"
 cortex-m-rt = "0.6.10"
 nb = "0.1.2"
@@ -142,3 +143,7 @@ required-features = ["rt", "stm32f407"]
 [[example]]
 name = "qei"
 required-features = ["rt", "stm32f411"]
+
+[[example]]
+name = "can-send"
+required-features = ["has-can"]
