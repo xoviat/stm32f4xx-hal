@@ -19,9 +19,9 @@
 //! | RX       | PB12  |
 
 use crate::gpio::{
-    gpiob::{PB8, PB9},
     gpiob::{PB12, PB13},
-    Alternate, Floating, Input, PushPull,
+    gpiob::{PB8, PB9},
+    Alternate, Floating, Input, PushPull, AF9,
 };
 use crate::pac::CAN1;
 use crate::pac::CAN2;
@@ -35,13 +35,13 @@ pub trait Pins: sealed::Sealed {
     type Instance;
 }
 
-impl sealed::Sealed for (PB9<Alternate<PushPull>>, PB8<Input<Floating>>) {}
-impl Pins for (PB9<Alternate<PushPull>>, PB8<Input<Floating>>) {
+impl sealed::Sealed for (PB9<Alternate<AF9>>, PB8<Alternate<AF9>>) {}
+impl Pins for (PB9<Alternate<AF9>>, PB8<Alternate<AF9>>) {
     type Instance = CAN1;
 }
 
-impl sealed::Sealed for (PB13<Alternate<PushPull>>, PB12<Input<Floating>>) {}
-impl Pins for (PB13<Alternate<PushPull>>, PB12<Input<Floating>>) {
+impl sealed::Sealed for (PB13<Alternate<AF9>>, PB12<Alternate<AF9>>) {}
+impl Pins for (PB13<Alternate<AF9>>, PB12<Alternate<AF9>>) {
     type Instance = CAN2;
 }
 
@@ -55,7 +55,10 @@ where
     Instance: crate::rcc::Enable<Bus = APB1>,
 {
     /// Creates a CAN interaface.
-    pub fn new(can: Instance, apb: &mut APB1) -> Can<Instance> {
+    pub fn new<P>(can: Instance, _pins: P, apb: &mut APB1) -> Can<Instance>
+    where
+        P: Pins<Instance = Instance>,
+    {
         Instance::enable(apb);
         Can { _peripheral: can }
     }

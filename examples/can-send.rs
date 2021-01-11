@@ -25,10 +25,10 @@ fn main() -> ! {
 
     let gpiob = dp.GPIOB.split();
     let mut can1 = {
-        let can = Can::new(dp.CAN1, &mut rcc.apb1);
-
         let rx = gpiob.pb9.into_alternate_af9();
         let tx = gpiob.pb8.into_alternate_af9();
+
+        let can = Can::new(dp.CAN1, (rx, tx), &mut rcc.apb1);
 
         bxcan::Can::new(can)
     };
@@ -43,10 +43,10 @@ fn main() -> ! {
     filters.enable_bank(0, Mask32::accept_all());
 
     let can2 = {
-        let can = Can::new(dp.CAN2, &mut rcc.apb1);
+        let rx = gpiob.pb13.into_alternate_af9();
+        let tx = gpiob.pb12.into_alternate_af9();
 
-        let rx = gpiob.pb5.into_floating_input();
-        let tx = gpiob.pb6.into_alternate_af7();
+        let can = Can::new(dp.CAN2, (rx, tx), &mut rcc.apb1);
 
         let mut can2 = bxcan::Can::new(can);
         can2.configure(|config| {
