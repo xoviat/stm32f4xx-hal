@@ -1507,7 +1507,6 @@ impl Clocks {
     }
 }
 
-
 pub(crate) mod sealed {
     /// Bus associated to peripheral
     pub trait RccBus {
